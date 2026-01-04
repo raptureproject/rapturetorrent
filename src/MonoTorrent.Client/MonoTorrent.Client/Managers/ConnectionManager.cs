@@ -34,11 +34,13 @@ using System.Security.Cryptography;
 using System.Threading;
 
 using MonoTorrent.BEncoding;
+using MonoTorrent.Client.Cryptography;
 using MonoTorrent.Client.RateLimiters;
 using MonoTorrent.Connections;
 using MonoTorrent.Connections.Peer;
 using MonoTorrent.Connections.Peer.Encryption;
 using MonoTorrent.Logging;
+using MonoTorrent.Messages;
 using MonoTorrent.Messages.Peer;
 
 using ReusableTasks;
@@ -318,8 +320,13 @@ namespace MonoTorrent.Client
                 throw new ProtocolException ("Invalid protocol string");
             }
 
+            using var blowfish = (BlowfishImplementation) Blowfish.Create ();
+            blowfish.Key = handshake.PeerId.Span.ToArray ();
+            var encHash = manager.InfoHashes.V1OrV2.Span.ToArray ();
+            blowfish.TryEncryptEcbCore (manager.InfoHashes.V1OrV2.Span.Slice (0, 16), encHash, PaddingMode.None, out _);
+
             // If the infohash doesn't match, dump the connection
-            if (!manager.InfoHashes.Contains (handshake.InfoHash)) {
+            if (!MemoryExtensions.SequenceEqual (handshake.InfoHash.Span, encHash.AsSpan ())) {
                 logger.Info (connection, "HandShake.Handle - Invalid infohash");
                 throw new TorrentException ("Invalid infohash. Not tracking this torrent");
             }
@@ -331,7 +338,7 @@ namespace MonoTorrent.Client
 
             // If this is a hybrid torrent, and the other peer announced with the v1 hash *and* set the bit which indicates
             // they can upgrade to a V2 connection, respond with the V2 hash to upgrade the connection to V2 mode.
-            var infoHash = handshake.SupportsUpgradeToV2 && manager.InfoHashes.IsHybrid ? manager.InfoHashes.V2! : manager.InfoHashes.Expand (handshake.InfoHash);
+            var infoHash = handshake.SupportsUpgradeToV2 && manager.InfoHashes.IsHybrid ? manager.InfoHashes.V2! : manager.InfoHashes.Expand (manager.InfoHashes.V1OrV2);
 
             // Create the peerid now that everything is established.
             var id = new PeerId (peer, connection, new BitField (manager.Bitfield.Length), infoHash, encryptor: encryptor, decryptor: decryptor, new Software (handshake.PeerId));
@@ -520,9 +527,13 @@ namespace MonoTorrent.Client
                     return false;
                 }
 
+                using var blowfish = (BlowfishImplementation) Blowfish.Create ();
+                blowfish.Key = LocalPeerId.Span.ToArray ();
+                var encHash = manager.InfoHashes.V1OrV2.Span.ToArray ();
+                blowfish.TryEncryptEcbCore (manager.InfoHashes.V1OrV2.Span.Slice (0, 16), encHash, PaddingMode.None, out _);
 
                 // Send our handshake first, then decide if we've connected to ourselves or not.
-                var handshake = new HandshakeMessage (id.ExpectedInfoHash.Truncate (), LocalPeerId, Constants.ProtocolStringV100);
+                var handshake = new HandshakeMessage (InfoHash.FromMemory (encHash), LocalPeerId, Constants.ProtocolStringV100);
                 await PeerIO.SendMessageAsync (id.Connection, id.Encryptor, handshake, manager.UploadLimiters, id.Monitor, manager.Monitor);
 
                 if (LocalPeerId.Equals (id.PeerID)) {

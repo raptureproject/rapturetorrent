@@ -365,11 +365,14 @@ namespace MonoTorrent.Client
         {
             var torrent = await Torrent.LoadAsync (metadataPath).ConfigureAwait (false);
 
-            var metadataCachePath = Settings.GetMetadataPath (torrent.InfoHashes);
-            if (metadataPath != metadataCachePath) {
-                Directory.CreateDirectory (Path.GetDirectoryName (metadataCachePath)!);
-                File.Copy (metadataPath, metadataCachePath, true);
+            if (Settings.AutoSaveLoadMagnetLinkMetadata) {
+                var metadataCachePath = Settings.GetMetadataPath (torrent.InfoHashes);
+                if (metadataPath != metadataCachePath) {
+                    Directory.CreateDirectory (Path.GetDirectoryName (metadataCachePath)!);
+                    File.Copy (metadataPath, metadataCachePath, true);
+                }
             }
+
             return await AddAsync (null, torrent, saveDirectory, settings);
         }
 
@@ -398,9 +401,11 @@ namespace MonoTorrent.Client
                 }
             }
 
-            var metadataCachePath = Settings.GetMetadataPath (torrent.InfoHashes);
-            Directory.CreateDirectory (Path.GetDirectoryName (metadataCachePath)!);
-            File.WriteAllBytes (metadataCachePath, editor.ToDictionary ().Encode ());
+            if (Settings.AutoSaveLoadMagnetLinkMetadata) {
+                var metadataCachePath = Settings.GetMetadataPath (torrent.InfoHashes);
+                Directory.CreateDirectory (Path.GetDirectoryName (metadataCachePath)!);
+                File.WriteAllBytes (metadataCachePath, editor.ToDictionary ().Encode ());
+            }
 
             return await AddAsync (null, torrent, saveDirectory, settings);
         }
@@ -934,11 +939,19 @@ namespace MonoTorrent.Client
             if (File.Exists (settings.CacheDirectory))
                 throw new ArgumentException ("EngineSettings.CacheDirectory should be a directory, but a file exists at that path instead. Please delete the file or choose another path", nameof (settings));
 
-            foreach (var directory in new[] { settings.CacheDirectory, settings.MetadataCacheDirectory, settings.FastResumeCacheDirectory }) {
+            if (settings.AutoSaveLoadMagnetLinkMetadata || settings.AutoSaveLoadFastResume) {
                 try {
-                    Directory.CreateDirectory (directory);
+                    Directory.CreateDirectory (settings.CacheDirectory);
+
+                    if (settings.AutoSaveLoadMagnetLinkMetadata) {
+                        Directory.CreateDirectory (settings.MetadataCacheDirectory);
+                    }
+
+                    if (settings.AutoSaveLoadFastResume) {
+                        Directory.CreateDirectory (settings.FastResumeCacheDirectory);
+                    }
                 } catch (Exception e) {
-                    throw new ArgumentException ($"Could not create a directory at the path {directory}. Please check this path has read/write permissions for this user.", nameof (settings), e);
+                    throw new ArgumentException ($"Could not create a cache directory. Please check that the path has read/write permissions for this user.", nameof (settings), e);
                 }
             }
         }
@@ -1006,17 +1019,17 @@ namespace MonoTorrent.Client
 
         static BEncodedString GeneratePeerId ()
         {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
             var sb = new StringBuilder (20);
-            sb.Append ("-");
-            sb.Append (GitInfoHelper.ClientVersion);
-            sb.Append ("-");
+            sb.Append ("-SQ0001-");
 
             // Create and use a single Random instance which *does not* use a seed so that
             // the random sequence generated is definitely not the same between application
             // restarts.
             lock (PeerIdRandomGenerator) {
                 while (sb.Length < 20)
-                    sb.Append (PeerIdRandomGenerator.Next (0, 9));
+                    sb.Append (chars[PeerIdRandomGenerator.Next (chars.Length)]);
             }
 
             return new BEncodedString (sb.ToString ());

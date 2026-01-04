@@ -458,12 +458,12 @@ namespace MonoTorrent.Client
             MetadataTask = new TaskCompletionSource<Torrent> ();
             MetadataPath = engine.Settings.GetMetadataPath (InfoHashes);
 
-            var announces = Torrent?.AnnounceUrls;
-            if (announces == null) {
-                announces = new List<IList<string>> ();
-                if (magnetLink?.AnnounceUrls != null)
-                    announces.Add (magnetLink.AnnounceUrls);
-            }
+            var announces = new List<IList<string>> ();
+            //if (announces == null) {
+            //    announces = new List<IList<string>> ();
+            //    if (magnetLink?.AnnounceUrls != null)
+            //        announces.Add (magnetLink.AnnounceUrls);
+            //}
             TrackerManager = new TrackerManager (engine.Factories, new TrackerRequestFactory (this), announces, torrent?.IsPrivate ?? false);
             SetTrackerManager (TrackerManager);
 

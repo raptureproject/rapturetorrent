@@ -63,23 +63,23 @@ namespace MonoTorrent.Client
         public bool AllowHaveSuppression { get; } = false;
 
         /// <summary>
-        /// True if the engine should use LocalPeerDiscovery to search for local peers. Defaults to <see langword="true"/>.
+        /// True if the engine should use LocalPeerDiscovery to search for local peers. Defaults to <see langword="false"/>.
         /// </summary>
-        public bool AllowLocalPeerDiscovery { get; } = true;
+        public bool AllowLocalPeerDiscovery { get; } = false;
 
         /// <summary>
         /// True if the engine should automatically forward ports using any compatible UPnP or NAT-PMP device.
-        /// Defaults to <see langword="true"/>.
+        /// Defaults to <see langword="false"/>.
         /// </summary>
-        public bool AllowPortForwarding { get; } = true;
+        public bool AllowPortForwarding { get; } = false;
 
         /// <summary>
         /// If set to true dht nodes will be implicitly saved when there are no active <see cref="TorrentManager"/> instances in the engine.
         /// Dht nodes will be restored when the first <see cref="TorrentManager"/> is started. Otherwise dht nodes will not be cached between
         /// restarts and the <see cref="IDhtEngine"/> will have to bootstrap from scratch each time.
-        /// Defaults to <see langword="true"/>.
+        /// Defaults to <see langword="false"/>.
         /// </summary>
-        public bool AutoSaveLoadDhtCache { get; } = true;
+        public bool AutoSaveLoadDhtCache { get; } = false;
 
         /// <summary>
         /// If set to true FastResume data will be implicitly saved after <see cref="TorrentManager.StopAsync()"/> is invoked,
@@ -95,9 +95,9 @@ namespace MonoTorrent.Client
         /// from <see cref="MetadataCacheDirectory"/>, if it exists, when the <see cref="MagnetLink"/> is added to the engine using
         /// <see cref="ClientEngine.AddAsync"/>. Additionally, metadata will be written to this directory if it is successfully retrieved
         /// from peers so future downloads can start immediately.
-        /// Defaults to <see langword="true"/>. 
+        /// Defaults to <see langword="false"/>. 
         /// </summary>
-        public bool AutoSaveLoadMagnetLinkMetadata { get; } = true;
+        public bool AutoSaveLoadMagnetLinkMetadata { get; } = false;
 
         /// <summary>
         /// The full path to the directory used to cache any data needed by the engine. Typically used to store a
@@ -143,19 +143,19 @@ namespace MonoTorrent.Client
 
         /// <summary>
         /// The UDP port used for DHT communications. Set the port to 0 to choose a random available port.
-        /// Set to null to disable DHT. Defaults to IPAddress.Any with port 0.
+        /// Set to null to disable DHT. Defaults to null.
         /// </summary>
-        public IPEndPoint? DhtEndPoint { get; } = new IPEndPoint (IPAddress.Any, 0);
+        public IPEndPoint? DhtEndPoint { get; } = null;
 
         /// <summary>
-        /// This is the full path to a sub-directory of <see cref="CacheDirectory"/>. If <see cref="AutoSaveLoadFastResume"/>
+        /// This is the full path to <see cref="CacheDirectory"/>. If <see cref="AutoSaveLoadFastResume"/>
         /// is enabled then fast resume data will be written to this when <see cref="TorrentManager.StopAsync"/> or
         /// <see cref="ClientEngine.StopAllAsync"/> is invoked. If fast resume data is available, the data will be loaded
         /// from disk as part of <see cref="ClientEngine.AddAsync"/> or <see cref="ClientEngine.AddStreamingAsync"/>. If
         /// <see cref="TorrentManager.StartAsync"/> is invoked, any on-disk fast resume data will be deleted to eliminate
         /// the possibility of loading stale data later.
         /// </summary>
-        public string FastResumeCacheDirectory => Path.Combine (CacheDirectory, "fastresume");
+        public string FastResumeCacheDirectory => CacheDirectory;
 
         /// <summary>
         /// When <see cref="EngineSettings.AutoSaveLoadFastResume"/> is true, this setting is used to control how fast
@@ -182,12 +182,12 @@ namespace MonoTorrent.Client
 
         /// <summary>
         /// The TCP port the engine should listen on for incoming connections. Set the port to 0 to use a random
-        /// available port, set to null to disable incoming connections. Defaults to IPAddress.Any and IPAddress.AnyIPv6,
-        /// both with port 0.
+        /// available port, set to null to disable incoming connections. Defaults to IPAddress.Loopback and IPAddress.IPv6Loopback,
+        /// both with port 55296.
         /// </summary>
         public IDictionary<string, IPEndPoint> ListenEndPoints { get; } = new ReadOnlyDictionary<string, IPEndPoint> (new Dictionary<string, IPEndPoint> {
-            {"ipv4", new IPEndPoint (IPAddress.Any, 0) },
-            {"ipv6", new IPEndPoint (IPAddress.IPv6Any, 0) }
+            {"ipv4", new IPEndPoint (IPAddress.Loopback, 55296) },
+            {"ipv6", new IPEndPoint (IPAddress.IPv6Loopback, 55296) }
         });
 
         /// <summary>
@@ -268,9 +268,9 @@ namespace MonoTorrent.Client
 
         /// <summary>
         /// The delay before a torrent will start using web seeds.
-        /// Defaults to 1 minute.
+        /// Defaults to 0 minutes.
         /// </summary>
-        public TimeSpan WebSeedDelay { get; } = TimeSpan.FromMinutes (1);
+        public TimeSpan WebSeedDelay { get; } = TimeSpan.FromMinutes (0);
 
         /// <summary>
         /// The download speed under which a torrent will start using web seeds.

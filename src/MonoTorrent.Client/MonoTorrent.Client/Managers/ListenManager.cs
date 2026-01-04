@@ -30,7 +30,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 
+using MonoTorrent.Client.Cryptography;
 using MonoTorrent.Client.Listeners;
 using MonoTorrent.Connections;
 using MonoTorrent.Connections.Peer;
@@ -133,9 +135,18 @@ namespace MonoTorrent.Client
                 return false;
             }
 
-            for (int i = 0; i < Engine.Torrents.Count; i++)
-                if (Engine.Torrents[i].InfoHashes.Contains (message.InfoHash))
+            using var blowfish = (BlowfishImplementation) Blowfish.Create ();
+            blowfish.Key = message.PeerId.Span.ToArray ();
+
+            for (int i = 0; i < Engine.Torrents.Count; i++) {
+                var encHash = Engine.Torrents[i].InfoHashes.V1OrV2.Span.ToArray ();
+                blowfish.TryEncryptEcbCore (Engine.Torrents[i].InfoHashes.V1OrV2.Span.Slice (0, 16), encHash, PaddingMode.None, out _);
+
+                if (MemoryExtensions.SequenceEqual (message.InfoHash.Span, encHash.AsSpan ())) {
                     man = Engine.Torrents[i];
+                    break;
+                }
+            }
 
             // We're not hosting that torrent
             if (man == null) {

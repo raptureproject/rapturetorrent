@@ -25,6 +25,6 @@
         /// <summary>
         /// Protocol string for version 1.0 of Bittorrent Protocol
         /// </summary>
-        public const string ProtocolStringV100 = "BitTorrent protocol";
+        public const string ProtocolStringV100 = "SqexPatchSystem v01";
     }
 }
