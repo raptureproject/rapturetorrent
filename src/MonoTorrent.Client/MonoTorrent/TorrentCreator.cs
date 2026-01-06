@@ -177,7 +177,7 @@ namespace MonoTorrent
         {
             GetrightHttpSeeds = new List<string> ();
             CanEditSecureMetadata = true;
-            CreatedBy = $"MonoTorrent {GitInfoHelper.Version}";
+            CreatedBy = null;
             Factories = factories;
             Type = type;
         }
