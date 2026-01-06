@@ -388,9 +388,6 @@ namespace MonoTorrent
                 seedlist.AddRange (GetrightHttpSeeds.Select (s => (BEncodedString) s));
                 torrent["url-list"] = seedlist;
             }
-
-            TimeSpan span = DateTime.UtcNow - new DateTime (1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            torrent["creation date"] = new BEncodedNumber ((long) span.TotalSeconds);
         }
 
         async Task<(

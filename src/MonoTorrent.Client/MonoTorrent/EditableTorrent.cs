@@ -138,9 +138,6 @@ namespace MonoTorrent
             if (value is BEncodedList tiers)
                 foreach (var tier in tiers.OfType<BEncodedList> ())
                     Announces.Add (tier.OfType<BEncodedString> ().Select (t => t.Text).ToList ());
-
-            if (string.IsNullOrEmpty (Encoding))
-                Encoding = "UTF-8";
         }
 
         protected void CheckCanEditSecure ()
